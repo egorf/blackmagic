@@ -112,6 +112,7 @@ int jtag_scan(const uint8_t *irlens)
 	/* Run throught the SWD to JTAG sequence for the case where an attached SWJ-DP is
 	 * in SW-DP mode.
 	 */
+
 	DEBUG("Resetting TAP\n");
 	jtagtap_init();
 	jtagtap_reset();
