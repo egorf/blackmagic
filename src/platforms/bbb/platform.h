@@ -30,8 +30,8 @@
 #define PLATFORM_FATAL_ERROR(error)	abort()
 #define PLATFORM_SET_FATAL_ERROR_RECOVERY()
 
-#define GPIO_SWDCLK 30
-#define GPIO_SWDIO 60
+#define GPIO_SWDCLK 17
+#define GPIO_SWDIO 18
 
 #define morse_msg 0
 

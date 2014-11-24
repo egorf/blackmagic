@@ -56,6 +56,9 @@ int gpio_direction(uint8_t pin, bool output) {
 
 	/* Set the direction. */
 	snprintf(buf, bufsize, GPIO_DIRECTION, pin);
+
+	//printf ("GPIO_DIRECTION func. Current data:\nbuf == %s\nGPIO_DIRECTION == %s\nPin == %d\nOutput == %d\n", buf, GPIO_DIRECTION, pin, output);
+
 	int dir = open(buf, O_WRONLY | O_APPEND);
 	if(dir < 0) {
 		fprintf(stderr, "Error opening %s\n", buf);
@@ -70,17 +73,20 @@ int gpio_direction(uint8_t pin, bool output) {
 int gpio_set_value(uint8_t pin, bool value) {
 	static const int bufsize = 48;
 	char buf[bufsize];
-	char val = value ? '1' : '0';
+	char valb = value ? '1' : '0';
 
-	/* Set the direction. */
+	/* Set the value. */
 	snprintf(buf, bufsize, GPIO_VALUE, pin);
-	int dir = open(buf, O_WRONLY | O_APPEND);
-	if(dir < 0) {
+
+	printf ("GPIO_VALUE func. Current data:\nbuf == %s\nGPIO_VALUE == %s\nPin == %d\nValue == %d\n", buf, GPIO_VALUE, pin, value);
+
+	int val = open(buf, O_WRONLY | O_APPEND);
+	if(val < 0) {
 		fprintf(stderr, "Error opening %s\n", buf);
 		return -1;
 	}
-	write(dir, &val, 1);
-	close(dir);
+	write(val, &valb, 1);
+	close(val);
 
 	return 0;
 }
