@@ -191,6 +191,7 @@ bool stm32f1_probe(struct target_s *target)
 	}
 
 	target->idcode = adiv5_ap_mem_read(adiv5_target_ap(target), DBGMCU_IDCODE_F0) & 0xfff;
+    printf("Current ID code is %x\n", target->idcode);
 	switch(target->idcode) {
 	case 0x444:  /* STM32F03 */
 	case 0x440:  /* STM32F05 */
