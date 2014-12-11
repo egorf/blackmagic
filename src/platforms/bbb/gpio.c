@@ -19,100 +19,91 @@
  */
 
 #include <sys/types.h>
-#include <sys/stat.h>
 #include <fcntl.h>
 #include <stdio.h>
-#include <string.h>
 #include <assert.h>
+#include <stdlib.h>
+#include <errno.h>
 #include <unistd.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+
 
 #include "platform.h"
 #include "gpio.h"
 
-#define GPIO_EXPORTS "/sys/class/gpio/export"
-#define GPIO_DIRECTION "/sys/class/gpio/gpio%d/direction"
-#define GPIO_VALUE "/sys/class/gpio/gpio%d/value"
-
 int gpio_enable(uint8_t pin) {
-	static const int bufsize = 48;
-	char buf[bufsize];
+    int mem_fd;
+    void* gpio_map;
+    // open /dev/mem
+    if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0) 
+    {
+        printf("Cant open /dev/mem \n");
+        exit(-1);
+    }
 
-	/* Enable the specified GPIO. */
-	int exports = open(GPIO_EXPORTS, O_WRONLY | O_APPEND);
-	if(exports < 0) {
-		fprintf(stderr, "Error opening %s\n", GPIO_EXPORTS);
-		return -1;
-	}
-	snprintf(buf, bufsize, "%d", pin);
-	write(exports, buf, strlen(buf));
-	close(exports);
+    // mmap GPIO
+    gpio_map = mmap
+    (
+        NULL,                 // Any adddress in our space will do
+        BLOCK_SIZE,           // Map length
+        PROT_READ|PROT_WRITE, // Enable reading & writting to mapped memory
+        MAP_SHARED,           // Shared with other processes
+        mem_fd,               // File to map
+        GPIO_BASE             // Offset to GPIO peripheral
+    );
 
-	return 0;
+    close(mem_fd); //No need to keep mem_fd open after mmap
+
+    if (gpio_map == MAP_FAILED) 
+    {
+        printf("mmap error %d\n", (int)gpio_map);//errno also set!
+        exit(-1);
+    }
+
+    gpio = (volatile uint32_t *)gpio_map; // Always use volatile pointer!
+
+    return 0;
 }
 
-int gpio_direction(uint8_t pin, bool output) {
-	static const int bufsize = 48;
-	char buf[bufsize];
+int gpio_direction(uint8_t pin, bool output) 
+{
+    if (output == 0) 
+    {
+        GPIO_MODE_IN(pin);
+    } else {
+        GPIO_MODE_IN(pin);
+        GPIO_MODE_OUT(pin);
+    }
 
-	/* Set the direction. */
-	snprintf(buf, bufsize, GPIO_DIRECTION, pin);
-
-	// printf ("GPIO_DIRECTION func. Current data:\nbuf == %s\nGPIO_DIRECTION == %s\nPin == %d\nOutput == %d\n", buf, GPIO_DIRECTION, pin, output);
-
-	int dir = open(buf, O_WRONLY | O_APPEND);
-	if(dir < 0) {
-		fprintf(stderr, "Error opening %s\n", buf);
-		return -1;
-	}
-	write(dir, output ? "out" : "in", output ? 3 : 2);
-	close(dir);
-
-	return 0;
+    return 0;
 }
 
-int gpio_set_value(uint8_t pin, bool value) {
-	static const int bufsize = 48;
-	char buf[bufsize];
-	char valb = value ? '1' : '0';
+int gpio_set_value(uint8_t pin, bool value) 
+{
+    if (value == LOW) {
+        GPIO_SET_LOW = 1 << pin;
+    } else {
+        GPIO_SET_HIGH = 1 << pin;
+    }
 
-	/* Set the value. */
-	snprintf(buf, bufsize, GPIO_VALUE, pin);
-
-	// printf ("GPIO_VALUE func. Current data:\nbuf == %s\nGPIO_VALUE == %s\nPin == %d\nValue == %d\n", buf, GPIO_VALUE, pin, value);
-
-	int val = open(buf, O_WRONLY | O_APPEND);
-	if(val < 0) {
-		fprintf(stderr, "Error opening %s\n", buf);
-		return -1;
-	}
-	write(val, &valb, 1);
-	close(val);
-
-	return 0;
+    return 0;
 }
 
-int gpio_set(uint8_t pin) {
+int gpio_set(uint8_t pin) 
+{
 	return gpio_set_value(pin, true);
 }
 
-int gpio_clear(uint8_t pin) {
+int gpio_clear(uint8_t pin) 
+{
 	return gpio_set_value(pin, false);
 }
 
-bool gpio_get(uint8_t pin) {
-	static const int bufsize = 48;
-	char buf[bufsize];
-
-	/* Set the direction. */
-	snprintf(buf, bufsize, GPIO_VALUE, pin);
-	int dir = open(buf, O_RDONLY);
-	if(dir < 0) {
-		fprintf(stderr, "Error opening %s\n", buf);
-		return false;
-	}
-	char value;
-	read(dir, &value, 1);
-	close(dir);
-
-	return (value == '1');
+bool gpio_get(uint8_t pin) 
+{
+    uint32_t value = GPIO_GET(pin);
+    return value ? 1: 0;
 }
