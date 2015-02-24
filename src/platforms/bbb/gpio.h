@@ -24,7 +24,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 
- #define LOW                 0
+#define LOW                 0
 #define HIGH                1
 
 // Raspberry Pi GPIO memory

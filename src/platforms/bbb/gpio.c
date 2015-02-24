@@ -30,7 +30,6 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-
 #include "platform.h"
 #include "gpio.h"
 
