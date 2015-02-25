@@ -28,6 +28,8 @@
 #include "gdb_packet.h"
 #include "gpio.h"
 
+ static bool dbg = false;
+
 int swdptap_init(void)
 {
 	/* This must be investigated in more detail.
@@ -49,7 +51,8 @@ static void swdptap_turnaround(uint8_t dir)
 {
 	static uint8_t olddir = 0;
 
-	// DEBUG("%s", dir ? "\n-> ":"\n<- ");
+	if (dbg)
+		DEBUG("%s", dir ? "\n-> ":"\n<- ");
 
 	/* Don't turnaround if direction not changing */
 	if(dir == olddir) return;
@@ -69,14 +72,16 @@ static uint8_t swdptap_bit_in(void)
 	ret = gpio_get(GPIO_SWDIO);
 	swdptap_clock();
 
-	// DEBUG("%d", ret?1:0);
+	if(dbg)
+		DEBUG("%d", ret?1:0);
 
 	return ret != 0;
 }
 
 static void swdptap_bit_out(uint8_t val)
 {
-	// DEBUG("%d", val);
+	if(dbg)
+		DEBUG("%d", val);
 
 	gpio_set_value(GPIO_SWDIO, val);
 	swdptap_clock();

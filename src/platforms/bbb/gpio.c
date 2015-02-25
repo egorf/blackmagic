@@ -39,7 +39,7 @@ int gpio_enable(uint8_t pin)
 	char* board_name = mraa_get_platform_name();
 	uint8_t pin_libmraa = 0;
 
-    printf("hello mraa\n Version: %s\n Running on %s\n", mraa_get_version(), board_name);
+    printf("mraa Version: %s\nRunning on %s\n", mraa_get_version(), board_name);
 	
 	// Adapt pins to libmraa numeration
 	switch (pin)
@@ -64,8 +64,6 @@ int gpio_enable(uint8_t pin)
 			break;
 	}
 
-
-
     return 0;
 }
 
@@ -76,10 +74,20 @@ int gpio_direction(uint8_t pin, bool output)
 	switch (pin)
 	{
 		case GPIO_SWDIO:
+			if (val)
+			{
+				mraa_gpio_dir(gpio_swdio, !val);
+			}
+
 			mraa_gpio_dir(gpio_swdio, val);
 			break;
 		
 		case GPIO_SWDCLK:
+			if (val)
+			{
+				mraa_gpio_dir(gpio_swdclk, !val);
+			}
+
 			mraa_gpio_dir(gpio_swdclk, val);
 			break;
 		default:
@@ -107,6 +115,8 @@ int gpio_set_value(uint8_t pin, bool value)
 			printf("Weird pin write\n");
 			break;
 	}
+
+	//usleep(1); // FIXME control 1 us sleep for debugging
 
 	return 0;
 }
@@ -139,21 +149,23 @@ bool gpio_get(uint8_t pin)
 			break;
 	}
 
+	//usleep(1); // FIXME control 1 us sleep for debugging
+
 	return (value == 1);
 }
 
 static mraa_gpio_context swd_gpio_init(uint8_t pin_libmraa)
 {
 	// init the desired pin with libmraa
-	mraa_gpio_context gp = mraa_gpio_init(pin_libmraa);
+	volatile mraa_gpio_context gp = mraa_gpio_init(pin_libmraa);
 
 	// use register map pin handling
-	if (mraa_gpio_use_mmaped(gp, 1) != MRAA_SUCCESS)
-    {   
-    	printf("mmapped access to gpio with libmraa number ==  %d is not supported, falling back to normal mode\n", pin_libmraa);
-    } else {
-    	printf("Pin lm%d succesfully setup for mmap usage\n", pin_libmraa);
-    }
+	// if (mraa_gpio_use_mmaped(gp, 1) != MRAA_SUCCESS)
+ //    {   
+ //    	printf("mmapped access to gpio with libmraa number ==  %d is not supported, falling back to normal mode\n", pin_libmraa);
+ //    } else {
+ //    	printf("Pin lm%d succesfully setup for mmap usage\n", pin_libmraa);
+ //    }
 
     return gp;
 }

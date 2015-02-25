@@ -84,6 +84,9 @@ gdb_main(void)
 		size = gdb_getpacket(pbuf, BUF_SIZE);
 		SET_IDLE_STATE(0);
 	continue_activity:
+	
+		DEBUG("GDB packet gotten %c\n", pbuf[0]);
+
 		switch(pbuf[0]) {
 		/* Implementation of these is mandatory! */
 		case 'g': { /* 'g': Read general registers */
