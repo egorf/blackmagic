@@ -23,6 +23,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "mraa.h"
 
 extern int gpio_enable(uint8_t pin);
 extern int gpio_direction(uint8_t pin, bool output);

@@ -29,90 +29,141 @@
 #include "platform.h"
 #include "gpio.h"
 
-#define GPIO_EXPORTS "/sys/class/gpio/export"
-#define GPIO_DIRECTION "/sys/class/gpio/gpio%d/direction"
-#define GPIO_VALUE "/sys/class/gpio/gpio%d/value"
+static volatile mraa_gpio_context gpio_swdio;
+static volatile mraa_gpio_context gpio_swdclk;
 
-int gpio_enable(uint8_t pin) {
-	static const int bufsize = 48;
-	char buf[bufsize];
+int gpio_enable(uint8_t pin) 
+{
+	char* board_name = mraa_get_platform_name();
+	uint8_t pin_libmraa = 0;
 
-	/* Enable the specified GPIO. */
-	int exports = open(GPIO_EXPORTS, O_WRONLY | O_APPEND);
-	if(exports < 0) {
-		fprintf(stderr, "Error opening %s\n", GPIO_EXPORTS);
-		return -1;
+    printf("hello mraa\n Version: %s\n Running on %s\n", mraa_get_version(), board_name);
+	
+	// Adapt pins to libmraa numeration
+	switch (pin)
+	{
+		case GPIO_SWDIO:
+			pin_libmraa = 36;
+
+			// init the desired pin with libmraa
+			gpio_swdio = mraa_gpio_init(pin_libmraa);
+
+			// use register map pin handling
+			if (mraa_gpio_use_mmaped(gpio_swdio, 1) != MRAA_SUCCESS)
+    		{   
+       			printf("mmapped access to gpio %d is not supported, falling back to normal mode\n", pin);
+    		} else {
+    			printf("Pin GP%d == lm%d succesfully setup for mmap usage\n", GPIO_SWDIO, pin_libmraa);
+    		} 
+			break;
+
+		case GPIO_SWDCLK:
+			pin_libmraa = 48;
+
+			// init the desired pin with libmraa
+			gpio_swdclk = mraa_gpio_init(pin_libmraa);
+
+			// use register map pin handling
+			if (mraa_gpio_use_mmaped(gpio_swdclk, 1) != MRAA_SUCCESS)
+    		{   
+       			printf("mmapped access to gpio %d is not supported, falling back to normal mode\n", pin);
+    		} else {
+    			printf("Pin GP%d == lm%d succesfully setup for mmap usage\n", GPIO_SWDIO, pin_libmraa);
+    		}
+			break;
+		default:
+			printf("Weird pin init\n");
+			break;
 	}
-	snprintf(buf, bufsize, "%d", pin);
-	write(exports, buf, strlen(buf));
-	close(exports);
+
+    return 0;
+}
+
+int gpio_direction(uint8_t pin, bool output) 
+{
+	uint8_t val = output ? MRAA_GPIO_OUT : MRAA_GPIO_IN;
+
+	switch (pin)
+	{
+		case GPIO_SWDIO:
+			mraa_gpio_dir(gpio_swdio, val);
+			break;
+		
+		case GPIO_SWDCLK:
+			mraa_gpio_dir(gpio_swdclk, val);
+			break;
+		default:
+			printf("Weird pin write\n");
+			break;
+	}
 
 	return 0;
 }
 
-int gpio_direction(uint8_t pin, bool output) {
-	static const int bufsize = 48;
-	char buf[bufsize];
+int gpio_set_value(uint8_t pin, bool value)
+{
+	uint8_t val = value ? 1 : 0;
 
-	/* Set the direction. */
-	snprintf(buf, bufsize, GPIO_DIRECTION, pin);
-
-	// printf ("GPIO_DIRECTION func. Current data:\nbuf == %s\nGPIO_DIRECTION == %s\nPin == %d\nOutput == %d\n", buf, GPIO_DIRECTION, pin, output);
-
-	int dir = open(buf, O_WRONLY | O_APPEND);
-	if(dir < 0) {
-		fprintf(stderr, "Error opening %s\n", buf);
-		return -1;
+	switch (pin)
+	{
+		case GPIO_SWDIO:
+			mraa_gpio_write(gpio_swdio, val);
+			break;
+		
+		case GPIO_SWDCLK:
+			mraa_gpio_write(gpio_swdclk, val);
+			break;
+		default:
+			printf("Weird pin write\n");
+			break;
 	}
-	write(dir, output ? "out" : "in", output ? 3 : 2);
-	close(dir);
 
 	return 0;
 }
 
-int gpio_set_value(uint8_t pin, bool value) {
-	static const int bufsize = 48;
-	char buf[bufsize];
-	char valb = value ? '1' : '0';
-
-	/* Set the value. */
-	snprintf(buf, bufsize, GPIO_VALUE, pin);
-
-	// printf ("GPIO_VALUE func. Current data:\nbuf == %s\nGPIO_VALUE == %s\nPin == %d\nValue == %d\n", buf, GPIO_VALUE, pin, value);
-
-	int val = open(buf, O_WRONLY | O_APPEND);
-	if(val < 0) {
-		fprintf(stderr, "Error opening %s\n", buf);
-		return -1;
-	}
-	write(val, &valb, 1);
-	close(val);
-
-	return 0;
-}
-
-int gpio_set(uint8_t pin) {
+int gpio_set(uint8_t pin) 
+{
 	return gpio_set_value(pin, true);
 }
 
-int gpio_clear(uint8_t pin) {
+int gpio_clear(uint8_t pin) 
+{
 	return gpio_set_value(pin, false);
 }
 
-bool gpio_get(uint8_t pin) {
-	static const int bufsize = 48;
-	char buf[bufsize];
+bool gpio_get(uint8_t pin) 
+{
+	uint8_t value = 0;
+	switch (pin)
+	{
+		case GPIO_SWDIO:
+			value = mraa_gpio_read(gpio_swdio);
+			break;
+		
+		case GPIO_SWDCLK:
+			value = mraa_gpio_read(gpio_swdclk);
+			break;
 
-	/* Set the direction. */
-	snprintf(buf, bufsize, GPIO_VALUE, pin);
-	int dir = open(buf, O_RDONLY);
-	if(dir < 0) {
-		fprintf(stderr, "Error opening %s\n", buf);
-		return false;
+		default:
+			printf("Weird pin read\n");
+			break;
 	}
-	char value;
-	read(dir, &value, 1);
-	close(dir);
 
-	return (value == '1');
+	return (value == 1);
+}
+
+static mraa_gpio_context gpio_init(mraa_gpio_context pin_libmraa)
+{
+	// init the desired pin with libmraa
+	mraa_gpio_context gp = mraa_gpio_init(pin_libmraa);
+
+	// use register map pin handling
+	if (mraa_gpio_use_mmaped(gp, 1) != MRAA_SUCCESS)
+    {   
+    	printf("mmapped access to gpio with libmraa number ==  %d is not supported, falling back to normal mode\n", pin_libmraa);
+    } else {
+    	printf("Pin lm%d succesfully setup for mmap usage\n", pin_libmraa);
+    }
+
+    return gp;
 }

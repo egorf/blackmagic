@@ -40,7 +40,7 @@ int platform_init(int argc, char **argv)
 
 	assert(gdb_if_init() == 0);
 
-	printf("platform_init executuon. jtag_scan returns %d", jtag_scan(NULL));
+	printf("platform_init executuon. jtag_scan returns %d\n", jtag_scan(NULL));
 
 	//swdptap_init();
 
