@@ -1,3 +1,3 @@
 CFLAGS += -DBBB -Wno-format
-LDFLAGS += -lusb -lmraa
+LDFLAGS += -L/usr/lib/lusb 
 SRC += 	gpio.c

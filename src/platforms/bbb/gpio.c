@@ -18,107 +18,97 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <string.h>
-#include <assert.h>
-#include <unistd.h>
+
 
 #include "platform.h"
 #include "gpio.h"
 
-static volatile mraa_gpio_context gpio_swdio;
-static volatile mraa_gpio_context gpio_swdclk;
-
-static mraa_gpio_context swd_gpio_init(uint8_t pin_libmraa);
 
 int gpio_enable(uint8_t pin) 
 {
-	char* board_name = mraa_get_platform_name();
-	uint8_t pin_libmraa = 0;
+    //Might need to make some elements of this thread safe.
+    //For example only allow one thread to enter the following block
+    //to prevent mmap'ing twice
 
-    printf("mraa Version: %s\nRunning on %s\n", mraa_get_version(), board_name);
-	
-	// Adapt pins to libmraa numeration
-	switch (pin)
-	{
-		case GPIO_SWDIO:
-			pin_libmraa = 36;
-			// init the desired pin with libmraa
-			gpio_swdio = swd_gpio_init(pin_libmraa);
+    if (mmap_reg == NULL) {
+        if ((mmap_fd = open(MMAP_PATH, O_RDWR)) < 0) 
+        {
+            printf("edison map: unable to open resource file\n");
+            return -1;
+        }
 
-			break;
+        struct stat fd_stat;
+        fstat(mmap_fd, &fd_stat);
+        mmap_size = fd_stat.st_size;
 
-		case GPIO_SWDCLK:
-			pin_libmraa = 48;
-			// init the desired pin with libmraa
-			gpio_swdclk = swd_gpio_init(pin_libmraa);
-
-			break;
-		default:
-			printf("Weird pin init\n");
-			return 0;
-
-			break;
-	}
+        mmap_reg = (uint8_t*) mmap(NULL, fd_stat.st_size,
+                                   PROT_READ | PROT_WRITE,
+                                   MAP_FILE | MAP_SHARED,
+                                   mmap_fd, 0);
+        
+        if (mmap_reg == MAP_FAILED) 
+        {
+            printf("edison mmap: failed to mmap\n");
+            mmap_reg = NULL;
+            close(mmap_fd);
+            return -2;
+        }
+    }
 
     return 0;
 }
 
 int gpio_direction(uint8_t pin, bool output) 
 {
-	uint8_t val = output ? MRAA_GPIO_OUT : MRAA_GPIO_IN;
+    // need to use SysFS
+    char value[3];
+    char filepath[MAX_SIZE];
+    int length;
+    int fd;
 
-	switch (pin)
-	{
-		case GPIO_SWDIO:
-			if (val)
-			{
-				mraa_gpio_dir(gpio_swdio, !val);
-			}
+    sprintf(filepath, SYSFS_PINMODE_PATH "%d/current_direction", pin);
 
-			mraa_gpio_dir(gpio_swdio, val);
-			break;
-		
-		case GPIO_SWDCLK:
-			if (val)
-			{
-				mraa_gpio_dir(gpio_swdclk, !val);
-			}
+    fd = open(filepath, O_WRONLY);
 
-			mraa_gpio_dir(gpio_swdclk, val);
-			break;
-		default:
-			printf("Weird pin write\n");
-			break;
-	}
+    if (fd < 0) 
+    {
+        printf("GPIO resource unavailable!\n");
+        return -1;
+    }
 
-	return 0;
+    if (output)
+    {
+        length = sprintf(value, "out");
+    } else {
+        length = sprintf(value, "in");
+    }
+
+    if (write(fd, value, length) < 0 ) 
+    {
+        printf("Unable to write direction for the %d pin\n", pin);
+        return -2;
+    }
+
+    close(fd);
+
+    return 0;
 }
 
 int gpio_set_value(uint8_t pin, bool value)
 {
-	uint8_t val = value ? 1 : 0;
+    uint8_t offset = ((pin / 32) * sizeof(uint32_t));
+    uint8_t valoff;
 
-	switch (pin)
-	{
-		case GPIO_SWDIO:
-			mraa_gpio_write(gpio_swdio, val);
-			break;
-		
-		case GPIO_SWDCLK:
-			mraa_gpio_write(gpio_swdclk, val);
-			break;
-		default:
-			printf("Weird pin write\n");
-			break;
-	}
+    if (value) {
+        valoff = 0x34;
+    } else {
+        valoff = 0x4c;
+    }
 
-	//usleep(1); // FIXME control 1 us sleep for debugging
+    *(volatile uint32_t*) (mmap_reg + offset + valoff) =
+        (uint32_t)(1 << (pin % 32));
 
-	return 0;
+    return 0;
 }
 
 int gpio_set(uint8_t pin) 
@@ -133,39 +123,15 @@ int gpio_clear(uint8_t pin)
 
 bool gpio_get(uint8_t pin) 
 {
-	uint8_t value = 0;
-	switch (pin)
-	{
-		case GPIO_SWDIO:
-			value = mraa_gpio_read(gpio_swdio);
-			break;
-		
-		case GPIO_SWDCLK:
-			value = mraa_gpio_read(gpio_swdclk);
-			break;
+    uint8_t offset = ((pin / 32) * sizeof(uint32_t));
+    uint32_t value;
 
-		default:
-			printf("Weird pin read\n");
-			break;
-	}
+    value = *(volatile uint32_t*) (mmap_reg + 0x04 + offset);
+    
+    if (value&(uint32_t)(1 << (pin % 32))) {
+        return true;
+    }
 
-	//usleep(1); // FIXME control 1 us sleep for debugging
-
-	return (value == 1);
+    return false;
 }
 
-static mraa_gpio_context swd_gpio_init(uint8_t pin_libmraa)
-{
-	// init the desired pin with libmraa
-	volatile mraa_gpio_context gp = mraa_gpio_init(pin_libmraa);
-
-	// use register map pin handling
-	// if (mraa_gpio_use_mmaped(gp, 1) != MRAA_SUCCESS)
- //    {   
- //    	printf("mmapped access to gpio with libmraa number ==  %d is not supported, falling back to normal mode\n", pin_libmraa);
- //    } else {
- //    	printf("Pin lm%d succesfully setup for mmap usage\n", pin_libmraa);
- //    }
-
-    return gp;
-}
