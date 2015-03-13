@@ -18,24 +18,56 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <sys/types.h>
-#include <fcntl.h>
-#include <stdio.h>
-#include <assert.h>
-#include <stdlib.h>
-#include <errno.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <poll.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-
 #include "platform.h"
 #include "gpio.h"
 
-int gpio_enable(uint8_t pin) {
+int getRaspberryPiVersion()
+{
+    char buffer[MAX_SIZE_LINE];
+    char* c = "Hardware";
+    char* v1 = "BCM2708";
+    char* v2 = "BCM2709";
+    char* flag;
+    FILE* fd;
+
+    fd = fopen("/proc/cpuinfo", "r");
+
+    while(fgets(buffer, MAX_SIZE_LINE, fd) != NULL)
+    {
+        flag = strstr(buffer, c);
+
+        if (flag != NULL) 
+        {
+            if (strstr(buffer, v2) != NULL)
+            {
+                // printf("Raspberry Pi 2 with BCM2709!\n");
+                fclose(fd);
+                return 2;
+            } 
+            else if (strstr(buffer, v1) != NULL) 
+            {
+                // printf("Raspberry Pi 1 with BCM2708!\n");
+                fclose(fd);
+                return 1;
+            }
+        }
+    }
+
+    // defaults to 1!!!!!
+    // printf("Could not detect RPi version, defaulting to 1\n");
+    fclose(fd);
+    return 1;
+}
+
+int gpio_enable(uint8_t pin) 
+{
     int mem_fd;
     void* gpio_map;
+    int gp_base = GPIO_BASE;
+
+    if(getRaspberryPiVersion() == 2)
+        gp_base = GPIO_BASE_2;
+
     // open /dev/mem
     if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0) 
     {
@@ -51,7 +83,7 @@ int gpio_enable(uint8_t pin) {
         PROT_READ|PROT_WRITE, // Enable reading & writting to mapped memory
         MAP_SHARED,           // Shared with other processes
         mem_fd,               // File to map
-        GPIO_BASE             // Offset to GPIO peripheral
+        gp_base            // Offset to GPIO peripheral
     );
 
     close(mem_fd); //No need to keep mem_fd open after mmap
@@ -106,3 +138,5 @@ bool gpio_get(uint8_t pin)
     uint32_t value = GPIO_GET(pin);
     return value ? 1: 0;
 }
+
+

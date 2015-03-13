@@ -23,13 +23,29 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+ #include <sys/types.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <assert.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <poll.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <string.h>
+
+#define MAX_SIZE_LINE 		64
 
 #define LOW                 0
 #define HIGH                1
 
 // Raspberry Pi GPIO memory
 #define BCM2708_PERI_BASE   0x20000000
+#define BCM2709_PERI_BASE   0x3f200000
 #define GPIO_BASE           (BCM2708_PERI_BASE + 0x200000)
+#define GPIO_BASE_2			(BCM2709_PERI_BASE + 0x200000)
 #define PAGE_SIZE           (4*1024)
 #define BLOCK_SIZE          (4*1024)
 
@@ -64,13 +80,14 @@
 #define RPI_GPIO_30   30   // Pin 5
 #define RPI_GPIO_31   31   // Pin 6
 
-volatile uint32_t *gpio;
-
 extern int gpio_enable(uint8_t pin);
 extern int gpio_direction(uint8_t pin, bool output);
 extern int gpio_set_value(uint8_t pin, bool value);
 extern int gpio_set(uint8_t pin);
 extern int gpio_clear(uint8_t pin);
 extern bool gpio_get(uint8_t pin);
+extern int getRaspberryPiVersion();
+
+volatile uint32_t *gpio;
 
 #endif /* __GPIO_H */
