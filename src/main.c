@@ -36,7 +36,7 @@
 int
 main(int argc, char **argv)
 {
-#if defined(LIBFTDI) || defined(BBB)
+#if defined(LIBFTDI) || defined(LINUX_PLATFORM)
 	assert(platform_init(argc, argv) == 0);
 #else
 	(void) argc;
