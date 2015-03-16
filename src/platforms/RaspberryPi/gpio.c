@@ -40,13 +40,13 @@ int getRaspberryPiVersion()
         {
             if (strstr(buffer, v2) != NULL)
             {
-                // printf("Raspberry Pi 2 with BCM2709!\n");
+                printf("Raspberry Pi 2 with BCM2709!\n");
                 fclose(fd);
                 return 2;
             } 
             else if (strstr(buffer, v1) != NULL) 
             {
-                // printf("Raspberry Pi 1 with BCM2708!\n");
+                printf("Raspberry Pi 1 with BCM2708!\n");
                 fclose(fd);
                 return 1;
             }
@@ -54,7 +54,7 @@ int getRaspberryPiVersion()
     }
 
     // defaults to 1!!!!!
-    // printf("Could not detect RPi version, defaulting to 1\n");
+    printf("Could not detect RPi version, defaulting to 1\n");
     fclose(fd);
     return 1;
 }
@@ -65,7 +65,7 @@ int gpio_enable(uint8_t pin)
     void* gpio_map;
     int gp_base = GPIO_BASE;
 
-    if(getRaspberryPiVersion() == 2)
+    if(RPiVersion == 2)
         gp_base = GPIO_BASE_2;
 
     // open /dev/mem

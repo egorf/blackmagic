@@ -89,5 +89,6 @@ extern bool gpio_get(uint8_t pin);
 extern int getRaspberryPiVersion();
 
 volatile uint32_t *gpio;
+static int RPiVersion;
 
 #endif /* __GPIO_H */
