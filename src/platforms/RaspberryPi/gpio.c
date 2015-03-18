@@ -59,6 +59,11 @@ int getRaspberryPiVersion()
     return 1;
 }
 
+void setRaspberryPiVersion()
+{
+    RPiVersion = getRaspberryPiVersion();
+}
+
 int gpio_enable(uint8_t pin) 
 {
     int mem_fd;
@@ -66,8 +71,11 @@ int gpio_enable(uint8_t pin)
     int gp_base = GPIO_BASE;
 
     if(RPiVersion == 2)
+    {
         gp_base = GPIO_BASE_2;
+    }
 
+    printf("Test: DefConst==%x, var==%x\n", GPIO_BASE_2, gp_base);
     // open /dev/mem
     if ((mem_fd = open("/dev/mem", O_RDWR|O_SYNC) ) < 0) 
     {

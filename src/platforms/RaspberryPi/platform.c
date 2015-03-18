@@ -33,7 +33,7 @@
 
 int platform_init(int argc, char **argv)
 {
-	RPiVersion = getRaspberryPiVersion();
+	setRaspberryPiVersion();
 	assert(gpio_enable(GPIO_SWDIO) == 0);
 	assert(gpio_enable(GPIO_SWDCLK) == 0);
 	assert(gpio_direction(GPIO_SWDIO, true) == 0);

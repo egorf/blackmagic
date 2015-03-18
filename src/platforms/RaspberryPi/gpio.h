@@ -43,9 +43,9 @@
 
 // Raspberry Pi GPIO memory
 #define BCM2708_PERI_BASE   0x20000000
-#define BCM2709_PERI_BASE   0x3f200000
+#define BCM2709_PERI_BASE   0x3f000000
 #define GPIO_BASE           (BCM2708_PERI_BASE + 0x200000)
-#define GPIO_BASE_2			(BCM2709_PERI_BASE + 0x200000)
+#define GPIO_BASE_2         (BCM2709_PERI_BASE + 0x200000)
 #define PAGE_SIZE           (4*1024)
 #define BLOCK_SIZE          (4*1024)
 
@@ -88,7 +88,7 @@ extern int gpio_clear(uint8_t pin);
 extern bool gpio_get(uint8_t pin);
 extern int getRaspberryPiVersion();
 
-volatile uint32_t *gpio;
+volatile uint32_t* gpio;
 static int RPiVersion;
 
 #endif /* __GPIO_H */
